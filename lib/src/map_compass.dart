@@ -107,7 +107,11 @@ class _MapCompassState extends State<MapCompass> with TickerProviderStateMixin {
           onTap: widget.onPressed ?? () => _resetRotation(context, camera),
           onLongPressStart: (_) {
             _longPressTimer = Timer(const Duration(milliseconds: 500), () {
-              widget.onLongPress?.call();
+              if (widget.onLongPress != null) {
+                widget.onLongPress!.call();
+              } else {
+                _resetRotation(context, camera);
+              }
             });
           },
           onLongPressEnd: (_) {
