@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_compass/src/utils.dart';
+import 'dart:async';
 
 /// A compass for flutter_map that shows the map rotation and allows to reset
 /// the rotation back to 0.
@@ -16,6 +17,7 @@ class MapCompass extends StatefulWidget {
     this.rotationDuration = const Duration(seconds: 1),
     this.animationCurve = Curves.fastOutSlowIn,
     this.onPressed,
+    this.onLongPress,
     this.hideIfRotatedNorth = false,
     this.alignment = Alignment.topRight,
     this.padding = const EdgeInsets.all(10),
@@ -25,6 +27,7 @@ class MapCompass extends StatefulWidget {
   const MapCompass.cupertino({
     super.key,
     this.onPressed,
+    this.onLongPress,
     this.hideIfRotatedNorth = false,
     this.rotationDuration = const Duration(seconds: 1),
     this.animationCurve = Curves.fastOutSlowIn,
@@ -49,6 +52,11 @@ class MapCompass extends StatefulWidget {
   ///
   /// This will override the default behaviour.
   final VoidCallback? onPressed;
+
+  /// Overrides the default behaviour for a long press event
+  ///
+  /// This will override the default behaviour.
+  final VoidCallback? onLongPress;
 
   /// Set to true to hide the compass while the map is not rotated.
   ///
@@ -80,8 +88,8 @@ class MapCompass extends StatefulWidget {
 class _MapCompassState extends State<MapCompass> with TickerProviderStateMixin {
   AnimationController? _animationController;
   late Animation<double> _rotateAnimation;
-
   late Tween<double> _rotationTween;
+  Timer? _longPressTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -95,14 +103,19 @@ class _MapCompassState extends State<MapCompass> with TickerProviderStateMixin {
       alignment: widget.alignment,
       child: Padding(
         padding: widget.padding,
-        child: Transform.rotate(
-          angle: (camera.rotation + widget.rotationOffset) * deg2Rad,
-          child: IconButton(
-            alignment: Alignment.center,
-            padding: EdgeInsets.zero,
-            icon: widget.icon,
-            onPressed:
-                widget.onPressed ?? () => _resetRotation(context, camera),
+        child: GestureDetector(
+          onTap: widget.onPressed ?? () => _resetRotation(context, camera),
+          onLongPressStart: (_) {
+            _longPressTimer = Timer(const Duration(milliseconds: 500), () {
+              widget.onLongPress?.call();
+            });
+          },
+          onLongPressEnd: (_) {
+            _longPressTimer?.cancel();
+          },
+          child: Transform.rotate(
+            angle: (camera.rotation + widget.rotationOffset) * deg2Rad,
+            child: widget.icon,
           ),
         ),
       ),
@@ -138,6 +151,7 @@ class _MapCompassState extends State<MapCompass> with TickerProviderStateMixin {
   @override
   void dispose() {
     _animationController?.dispose();
+    _longPressTimer?.cancel();
     super.dispose();
   }
 }
